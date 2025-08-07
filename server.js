@@ -26,8 +26,7 @@ function fileToGenerativePart(base64Data) {
 
 // FUNCIÓN PARA BUSCAR REPUESTOS EN TU TIENDA (CORREGIDA)
 async function searchParts(query) {
-    const searchUrl = `https://bybmotorepuestosnelson.tiendanegocio.com/productos/buscar/keywords=${encodeURIComponent(query)}`;
-    
+   const searchUrl = `https://bybmotorepuestosnelson.tiendanegocio.com/productos/buscar?keywords=${encodeURIComponent(query)}`;
     try {
         const { data } = await axios.get(searchUrl);
         const $ = cheerio.load(data);
