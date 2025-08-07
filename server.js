@@ -2,8 +2,8 @@ const express = require('express');
 const path = require('path');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { v4: uuidv4 } = require('uuid');
-const axios = require('axios'); // NUEVO: Importa axios
-const cheerio = require('cheerio'); // NUEVO: Importa cheerio
+const axios = require('axios');
+const cheerio = require('cheerio');
 const app = express();
 const port = 3000;
 
@@ -24,26 +24,37 @@ function fileToGenerativePart(base64Data) {
     };
 }
 
-// NUEVO: Función para buscar repuestos en una página web
+// FUNCIÓN PARA BUSCAR REPUESTOS EN TU TIENDA
 async function searchParts(query) {
-    const searchUrl = `https://www.ejemplo-repuestos.com/buscar?q=${encodeURIComponent(query)}`;
+    const searchUrl = `https://bybmotorepuestosnelson.tiendanegocio.com/buscar?q=${encodeURIComponent(query)}`;
     
     try {
         const { data } = await axios.get(searchUrl);
         const $ = cheerio.load(data);
         
         const results = [];
-        // Aquí debes encontrar los elementos HTML correctos para los resultados
-        // Ejemplo: $('.producto').each((i, el) => {
-        //   const name = $(el).find('.nombre-producto').text();
-        //   const price = $(el).find('.precio').text();
-        //   results.push({ name, price });
-        // });
+        // La lógica para encontrar los productos en tu tienda específica
+        $('.product-item-info').each((i, el) => {
+          const name = $(el).find('.product-item-link').text().trim();
+          const price = $(el).find('.price').text().trim();
+          const url = $(el).find('.product-item-link').attr('href');
+          if (name && url) {
+            results.push({ name, price, url });
+          }
+        });
         
-        return `He encontrado algunos repuestos para "${query}" en el sitio web de ejemplo.`; // Respuesta de ejemplo
+        if (results.length > 0) {
+            let responseText = `He encontrado estos resultados en tu tienda para "${query}":\n\n`;
+            results.slice(0, 3).forEach(item => { // Muestra los primeros 3 resultados
+                responseText += `* ${item.name} ${item.price ? `(${item.price})` : ''}\n  Enlace: ${item.url}\n\n`;
+            });
+            return responseText;
+        } else {
+            return `No he encontrado resultados para "${query}" en tu tienda. Puedes intentar buscar en Mercado Libre: https://listado.mercadolibre.com.ar/${encodeURIComponent(query)}`;
+        }
     } catch (error) {
-        console.error('Error al buscar repuestos:', error);
-        return 'Lo siento, no pude realizar la búsqueda en este momento. Inténtalo más tarde.';
+        console.error('Error al buscar repuestos:', error.message);
+        return 'Lo siento, no pude realizar la búsqueda en tu tienda en este momento. Inténtalo más tarde.';
     }
 }
 
@@ -65,17 +76,16 @@ app.post('/chat', async (req, res) => {
     const history = sessions[sessionId];
 
     try {
-        // NUEVA LÓGICA: Decide si usar la IA o la función de búsqueda
         const lowerCaseMessage = message.toLowerCase();
         if (lowerCaseMessage.includes('buscar') || lowerCaseMessage.includes('precio') || lowerCaseMessage.includes('dónde comprar')) {
             const searchResponse = await searchParts(message);
             res.json({ response: searchResponse });
-            return; // Termina la función aquí
+            return;
         }
 
         const model = genAI.getGenerativeModel({
             model: "gemini-1.5-flash",
-            systemInstruction: "Eres un asistente experto en repuestos de motos, especializado en modelos de baja y media cilindrada. Responde de forma profesional y técnica. Ahora puedes buscar repuestos en tiempo real si el usuario te lo pide. Si te preguntan por otro tema, responde: 'Lo siento, mi conocimiento se limita a los repuestos de motos.'"
+            systemInstruction: "Eres un asistente experto en repuestos de motos, especializado en modelos de baja y media cilindrada. Responde de forma profesional y técnica. Ahora puedes buscar repuestos en la tienda ByB Nelson si el usuario te lo pide. Si te preguntan por otro tema, responde: 'Lo siento, mi conocimiento se limita a los repuestos de motos.'"
         });
 
         const chat = model.startChat({ history: history });
