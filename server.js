@@ -24,9 +24,8 @@ function fileToGenerativePart(base64Data) {
     };
 }
 
-// FUNCIÓN CON EL AJUSTE PARA LIMPIAR LA CONSULTA
+// FUNCIÓN DE BÚSQUEDA MEJORADA
 async function searchParts(query) {
-    // Elimina las palabras clave de la búsqueda
     const cleanedQuery = query.toLowerCase().replace('buscar', '').replace('precio', '').replace('dónde comprar', '').trim();
     
     const searchUrl = `https://bybmotorepuestosnelson.tiendanegocio.com/productos/buscar?keywords=${encodeURIComponent(cleanedQuery)}`;
@@ -48,8 +47,11 @@ async function searchParts(query) {
         if (results.length > 0) {
             let responseText = `He encontrado estos resultados en tu tienda para "${cleanedQuery}":\n\n`;
             results.slice(0, 3).forEach(item => {
-                responseText += `* ${item.name} ${item.price ? `(${item.price})` : ''}\n  Enlace: ${item.url}\n\n`;
+                responseText += `* **${item.name}**\n  **Precio:** ${item.price ? `${item.price}` : 'Precio no disponible'}\n  **Enlace:** ${item.url}\n\n`;
             });
+            // Aquí puedes agregar un mensaje para que el bot pida al usuario si quiere más detalles
+            responseText += "Para más detalles sobre un producto específico, por favor, haz clic en el enlace.";
+
             return responseText;
         } else {
             return `No he encontrado resultados para "${cleanedQuery}" en tu tienda. Puedes intentar buscar en Mercado Libre: https://listado.mercadolibre.com.ar/${encodeURIComponent(cleanedQuery)}`;
