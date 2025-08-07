@@ -24,15 +24,18 @@ function fileToGenerativePart(base64Data) {
     };
 }
 
-// FUNCIÓN PARA BUSCAR REPUESTOS EN TU TIENDA (CORREGIDA)
+// FUNCIÓN CON EL AJUSTE PARA LIMPIAR LA CONSULTA
 async function searchParts(query) {
-   const searchUrl = `https://bybmotorepuestosnelson.tiendanegocio.com/productos/buscar?keywords=${encodeURIComponent(query)}`;
+    // Elimina las palabras clave de la búsqueda
+    const cleanedQuery = query.toLowerCase().replace('buscar', '').replace('precio', '').replace('dónde comprar', '').trim();
+    
+    const searchUrl = `https://bybmotorepuestosnelson.tiendanegocio.com/productos/buscar?keywords=${encodeURIComponent(cleanedQuery)}`;
+    
     try {
         const { data } = await axios.get(searchUrl);
         const $ = cheerio.load(data);
         
         const results = [];
-        // Lógica corregida para encontrar productos en el HTML de tu tienda
         $('.item-gift__content').each((i, el) => {
           const name = $(el).find('.item-gift__content-title a').text().trim();
           const price = $(el).find('.item-gift__content-price').text().trim();
@@ -43,13 +46,13 @@ async function searchParts(query) {
         });
         
         if (results.length > 0) {
-            let responseText = `He encontrado estos resultados en tu tienda para "${query}":\n\n`;
+            let responseText = `He encontrado estos resultados en tu tienda para "${cleanedQuery}":\n\n`;
             results.slice(0, 3).forEach(item => {
                 responseText += `* ${item.name} ${item.price ? `(${item.price})` : ''}\n  Enlace: ${item.url}\n\n`;
             });
             return responseText;
         } else {
-            return `No he encontrado resultados para "${query}" en tu tienda. Puedes intentar buscar en Mercado Libre: https://listado.mercadolibre.com.ar/${encodeURIComponent(query)}`;
+            return `No he encontrado resultados para "${cleanedQuery}" en tu tienda. Puedes intentar buscar en Mercado Libre: https://listado.mercadolibre.com.ar/${encodeURIComponent(cleanedQuery)}`;
         }
     } catch (error) {
         console.error('Error al buscar repuestos:', error.message);
