@@ -8,13 +8,9 @@ const port = 3000;
 const sessions = {};
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-// Middleware para servir archivos estáticos (HTML, CSS, JS)
 app.use(express.static('public'));
-
-// Middleware para procesar JSON en el cuerpo de las solicitudes (aumentamos el límite para imágenes)
 app.use(express.json({ limit: '50mb' }));
 
-// Función auxiliar para convertir el archivo en Base64 al formato de la API
 function fileToGenerativePart(base64Data) {
     const data = base64Data.split(',')[1];
     const mimeType = base64Data.split(',')[0].split(':')[1].split(';')[0];
@@ -26,7 +22,6 @@ function fileToGenerativePart(base64Data) {
     };
 }
 
-// Nueva ruta para iniciar una sesión de chat y obtener un ID
 app.get('/start-session', (req, res) => {
     const sessionId = uuidv4();
     sessions[sessionId] = [];
@@ -34,7 +29,6 @@ app.get('/start-session', (req, res) => {
     res.json({ sessionId: sessionId });
 });
 
-// Ruta para la comunicación con el bot de IA
 app.post('/chat', async (req, res) => {
     const { sessionId, message, imageData } = req.body;
     console.log(`Mensaje del usuario en sesión ${sessionId}: ${message}`);
@@ -48,12 +42,34 @@ app.post('/chat', async (req, res) => {
     try {
         const model = genAI.getGenerativeModel({
             model: "gemini-1.5-flash",
-            systemInstruction:"Eres un asistente experto en repuestos de motos. Responde de forma concisa y útil... Tu objetivo es identificar repuestos, recomendar alternativas y dar información técnica sobre motos."
+            // INSTRUCCIÓN CLAVE: Aquí es donde defines la personalidad del bot
+            systemInstruction: "Eres un asistente experto en repuestos de motos, especializado en modelos de baja y media cilindrada. Responde de manera profesional y técnica, pero con lenguaje simple. No respondas preguntas fuera de este tema. Si te preguntan por otro tema, responde: 'Lo siento, mi conocimiento se limita a los repuestos de motos.'"
         });
 
-        const chat = model.startChat({ history: history });
+        // INCLUYE LOS EJEMPLOS DE CONVERSACIÓN AQUÍ
+        const chat = model.startChat({
+            history: [
+                {
+                    role: "user",
+                    parts: [{ text: "¿Cuál es el filtro de aire para una Yamaha FZ 16?" }]
+                },
+                {
+                    role: "model",
+                    parts: [{ text: "El filtro de aire es el número de parte 123-456-789. Es importante revisarlo cada 5,000 km." }]
+                },
+                {
+                    role: "user",
+                    parts: [{ text: "¿Qué aceite me recomiendas para una Honda Tornado 250?" }]
+                },
+                {
+                    role: "model",
+                    parts: [{ text: "Para la Honda Tornado 250 se recomienda un aceite 10W-30. Te sugiero un Motul 5100 o un Castrol Power 1." }]
+                },
+                // El resto del historial de la sesión del usuario se agrega después de estos ejemplos
+                ...history
+            ]
+        });
         
-        // Creamos un array de partes para la solicitud a la IA
         const parts = [];
         if (message) {
             parts.push({ text: message });
@@ -65,7 +81,7 @@ app.post('/chat', async (req, res) => {
         const result = await chat.sendMessage(parts);
         const botResponse = result.response.text();
 
-        // Agregamos el mensaje y la respuesta al historial
+        // Almacena el historial para la próxima interacción
         history.push({ role: 'user', parts: parts });
         history.push({ role: 'model', parts: [{ text: botResponse }] });
 
