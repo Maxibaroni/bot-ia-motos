@@ -24,20 +24,20 @@ function fileToGenerativePart(base64Data) {
     };
 }
 
-// FUNCIÓN PARA BUSCAR REPUESTOS EN TU TIENDA
+// FUNCIÓN PARA BUSCAR REPUESTOS EN TU TIENDA (CORREGIDA)
 async function searchParts(query) {
-    const searchUrl = `https://bybmotorepuestosnelson.tiendanegocio.com/buscar?q=${encodeURIComponent(query)}`;
+    const searchUrl = `https://bybmotorepuestosnelson.tiendanegocio.com/productos/buscar/keywords=${encodeURIComponent(query)}`;
     
     try {
         const { data } = await axios.get(searchUrl);
         const $ = cheerio.load(data);
         
         const results = [];
-        // Lógica para encontrar productos en el HTML de tiendas de Tienda Negocio
-        $('.product-block').each((i, el) => {
-          const name = $(el).find('.product-block__name').text().trim();
-          const price = $(el).find('.product-block__price').text().trim();
-          const url = `https://bybmotorepuestosnelson.tiendanegocio.com${$(el).find('.product-block__link').attr('href')}`;
+        // Lógica corregida para encontrar productos en el HTML de tu tienda
+        $('.item-gift__content').each((i, el) => {
+          const name = $(el).find('.item-gift__content-title a').text().trim();
+          const price = $(el).find('.item-gift__content-price').text().trim();
+          const url = `https://bybmotorepuestosnelson.tiendanegocio.com${$(el).find('.item-gift__content-title a').attr('href')}`;
           if (name && url) {
             results.push({ name, price, url });
           }
