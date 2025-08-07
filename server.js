@@ -33,11 +33,11 @@ async function searchParts(query) {
         const $ = cheerio.load(data);
         
         const results = [];
-        // La lógica para encontrar los productos en tu tienda específica
-        $('.product-item-info').each((i, el) => {
-          const name = $(el).find('.product-item-link').text().trim();
-          const price = $(el).find('.price').text().trim();
-          const url = $(el).find('.product-item-link').attr('href');
+        // Lógica para encontrar productos en el HTML de tiendas de Tienda Negocio
+        $('.product-block').each((i, el) => {
+          const name = $(el).find('.product-block__name').text().trim();
+          const price = $(el).find('.product-block__price').text().trim();
+          const url = `https://bybmotorepuestosnelson.tiendanegocio.com${$(el).find('.product-block__link').attr('href')}`;
           if (name && url) {
             results.push({ name, price, url });
           }
@@ -45,7 +45,7 @@ async function searchParts(query) {
         
         if (results.length > 0) {
             let responseText = `He encontrado estos resultados en tu tienda para "${query}":\n\n`;
-            results.slice(0, 3).forEach(item => { // Muestra los primeros 3 resultados
+            results.slice(0, 3).forEach(item => {
                 responseText += `* ${item.name} ${item.price ? `(${item.price})` : ''}\n  Enlace: ${item.url}\n\n`;
             });
             return responseText;
