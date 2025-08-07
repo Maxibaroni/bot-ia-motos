@@ -48,7 +48,7 @@ app.post('/chat', async (req, res) => {
     try {
         const model = genAI.getGenerativeModel({
             model: "gemini-1.5-flash",
-            systemInstruction: "Eres un asistente experto en problemas del hogar en Argentina. Responde de forma concisa y útil, usando un lenguaje sencillo. Tu objetivo es dar una sola solución clara sin añadir información extra. No te salgas de este tema."
+            systemInstruction:"Eres un asistente experto en repuestos de motos. Responde de forma concisa y útil... Tu objetivo es identificar repuestos, recomendar alternativas y dar información técnica sobre motos."
         });
 
         const chat = model.startChat({ history: history });
