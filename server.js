@@ -65,6 +65,22 @@ app.post('/chat', async (req, res) => {
                     role: "model",
                     parts: [{ text: "Para la Honda Tornado 250 se recomienda un aceite 10W-30. Te sugiero un Motul 5100 o un Castrol Power 1." }]
                 },
+                {
+                    role: "user",
+                    parts: [{ text: "Necesito un kit de arrastre para mi Bajaj Rouser 200." }]
+                },
+                {
+                    role: "model",
+                    parts: [{ text: "Para una Bajaj Rouser 200 (NS200), necesitas un kit de arrastre con cadena 520H y piñón de 14 dientes. Las marcas más recomendadas son DID y Riffel." }]
+                },
+                {
+                    role: "user",
+                    parts: [{ text: "¿Cada cuánto se cambia la bujía de una Zanella RX 150?" }]
+                },
+                {
+                    role: "model",
+                    parts: [{ text: "La bujía de una Zanella RX 150 debe revisarse cada 3.000 km y cambiarse cada 6.000 km. Usa el modelo NGK C7HSA." }]
+                },
                 // El resto del historial de la sesión del usuario se agrega después de estos ejemplos
                 ...history
             ]
