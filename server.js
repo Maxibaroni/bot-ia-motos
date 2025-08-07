@@ -2,6 +2,8 @@ const express = require('express');
 const path = require('path');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { v4: uuidv4 } = require('uuid');
+const axios = require('axios'); // NUEVO: Importa axios
+const cheerio = require('cheerio'); // NUEVO: Importa cheerio
 const app = express();
 const port = 3000;
 
@@ -22,6 +24,29 @@ function fileToGenerativePart(base64Data) {
     };
 }
 
+// NUEVO: Función para buscar repuestos en una página web
+async function searchParts(query) {
+    const searchUrl = `https://www.ejemplo-repuestos.com/buscar?q=${encodeURIComponent(query)}`;
+    
+    try {
+        const { data } = await axios.get(searchUrl);
+        const $ = cheerio.load(data);
+        
+        const results = [];
+        // Aquí debes encontrar los elementos HTML correctos para los resultados
+        // Ejemplo: $('.producto').each((i, el) => {
+        //   const name = $(el).find('.nombre-producto').text();
+        //   const price = $(el).find('.precio').text();
+        //   results.push({ name, price });
+        // });
+        
+        return `He encontrado algunos repuestos para "${query}" en el sitio web de ejemplo.`; // Respuesta de ejemplo
+    } catch (error) {
+        console.error('Error al buscar repuestos:', error);
+        return 'Lo siento, no pude realizar la búsqueda en este momento. Inténtalo más tarde.';
+    }
+}
+
 app.get('/start-session', (req, res) => {
     const sessionId = uuidv4();
     sessions[sessionId] = [];
@@ -40,51 +65,20 @@ app.post('/chat', async (req, res) => {
     const history = sessions[sessionId];
 
     try {
+        // NUEVA LÓGICA: Decide si usar la IA o la función de búsqueda
+        const lowerCaseMessage = message.toLowerCase();
+        if (lowerCaseMessage.includes('buscar') || lowerCaseMessage.includes('precio') || lowerCaseMessage.includes('dónde comprar')) {
+            const searchResponse = await searchParts(message);
+            res.json({ response: searchResponse });
+            return; // Termina la función aquí
+        }
+
         const model = genAI.getGenerativeModel({
             model: "gemini-1.5-flash",
-            // INSTRUCCIÓN CLAVE: Aquí es donde defines la personalidad del bot
-           systemInstruction: "Eres un asistente experto en repuestos de motos, especializado en modelos de baja y media cilindrada. Responde de manera profesional y técnica, pero con lenguaje simple. Si un usuario te pide un repuesto sin especificar la marca, modelo o año, pídele esa información para poder ser más preciso. No respondas preguntas fuera de este tema. Si te preguntan por otro tema, responde: 'Lo siento, mi conocimiento se limita a los repuestos de motos.'"
+            systemInstruction: "Eres un asistente experto en repuestos de motos, especializado en modelos de baja y media cilindrada. Responde de forma profesional y técnica. Ahora puedes buscar repuestos en tiempo real si el usuario te lo pide. Si te preguntan por otro tema, responde: 'Lo siento, mi conocimiento se limita a los repuestos de motos.'"
         });
 
-        // INCLUYE LOS EJEMPLOS DE CONVERSACIÓN AQUÍ
-        const chat = model.startChat({
-            history: [
-                {
-                    role: "user",
-                    parts: [{ text: "¿Cuál es el filtro de aire para una Yamaha FZ 16?" }]
-                },
-                {
-                    role: "model",
-                    parts: [{ text: "El filtro de aire es el número de parte 123-456-789. Es importante revisarlo cada 5,000 km." }]
-                },
-                {
-                    role: "user",
-                    parts: [{ text: "¿Qué aceite me recomiendas para una Honda Tornado 250?" }]
-                },
-                {
-                    role: "model",
-                    parts: [{ text: "Para la Honda Tornado 250 se recomienda un aceite 10W-30. Te sugiero un Motul 5100 o un Castrol Power 1." }]
-                },
-                {
-                    role: "user",
-                    parts: [{ text: "Necesito un kit de arrastre para mi Bajaj Rouser 200." }]
-                },
-                {
-                    role: "model",
-                    parts: [{ text: "Para una Bajaj Rouser 200 (NS200), necesitas un kit de arrastre con cadena 520H y piñón de 14 dientes. Las marcas más recomendadas son DID y Riffel." }]
-                },
-                {
-                    role: "user",
-                    parts: [{ text: "¿Cada cuánto se cambia la bujía de una Zanella RX 150?" }]
-                },
-                {
-                    role: "model",
-                    parts: [{ text: "La bujía de una Zanella RX 150 debe revisarse cada 3.000 km y cambiarse cada 6.000 km. Usa el modelo NGK C7HSA." }]
-                },
-                // El resto del historial de la sesión del usuario se agrega después de estos ejemplos
-                ...history
-            ]
-        });
+        const chat = model.startChat({ history: history });
         
         const parts = [];
         if (message) {
@@ -97,7 +91,6 @@ app.post('/chat', async (req, res) => {
         const result = await chat.sendMessage(parts);
         const botResponse = result.response.text();
 
-        // Almacena el historial para la próxima interacción
         history.push({ role: 'user', parts: parts });
         history.push({ role: 'model', parts: [{ text: botResponse }] });
 
