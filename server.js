@@ -2,7 +2,7 @@ const express = require('express');
 const path = require('path');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { v4: uuidv4 } = require('uuid');
-const sqlite3 = require('sqlite3').verbose();
+const Database = require('better-sqlite3');
 const app = express();
 const port = 3000;
 
@@ -10,20 +10,17 @@ const sessions = {};
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 // --- CONEXIÓN Y CREACIÓN DE LA TABLA DE LA BASE DE DATOS ---
-const db = new sqlite3.Database('./tienda.db');
-
-db.serialize(() => {
-  db.run(`
-    CREATE TABLE IF NOT EXISTS productos (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      nombre TEXT NOT NULL,
-      precio TEXT,
-      descripcion TEXT,
-      url TEXT
-    )
-  `);
-  console.log("Tabla 'productos' creada o ya existente.");
-});
+const db = new Database('tienda.db');
+db.prepare(`
+  CREATE TABLE IF NOT EXISTS productos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nombre TEXT NOT NULL,
+    precio TEXT,
+    descripcion TEXT,
+    url TEXT
+  )
+`).run();
+console.log("Tabla 'productos' creada o ya existente.");
 // ----------------------------------------------------
 
 app.use(express.static(path.join(__dirname, 'public')));
@@ -44,25 +41,23 @@ function fileToGenerativePart(base64Data) {
   };
 }
 
+// FUNCIÓN DE BÚSQUEDA FINAL (usa better-sqlite3)
 async function searchParts(query) {
   const cleanedQuery = query.toLowerCase().replace('buscar', '').replace('precio', '').replace('dónde comprar', '').trim();
-
-  return new Promise((resolve, reject) => {
-    const sql = `SELECT nombre, precio, url FROM productos WHERE nombre LIKE ? LIMIT 1`;
-    db.get(sql, [`%${cleanedQuery}%`], (err, row) => {
-      if (err) {
-        console.error('Error en la base de datos:', err.message);
-        reject('Lo siento, no pude realizar la búsqueda en este momento.');
-        return;
-      }
-      if (row) {
-        const responseText = `He encontrado este repuesto en tu tienda:\n\n* **Producto:** ${row.nombre}\n* **Precio:** ${row.precio}\n* **Enlace:** ${row.url}`;
-        resolve(responseText);
-      } else {
-        resolve(`No he encontrado resultados para "${cleanedQuery}" en tu tienda. Puedes intentar buscar en Mercado Libre: https://listado.mercadolibre.com.ar/${encodeURIComponent(cleanedQuery)}`);
-      }
-    });
-  });
+  const sql = `SELECT nombre, precio, url FROM productos WHERE nombre LIKE ? LIMIT 1`;
+  
+  try {
+    const row = db.prepare(sql).get(`%${cleanedQuery}%`);
+    if (row) {
+      const responseText = `He encontrado este repuesto en tu tienda:\n\n* **Producto:** ${row.nombre}\n* **Precio:** ${row.precio}\n* **Enlace:** ${row.url}`;
+      return responseText;
+    } else {
+      return `No he encontrado resultados para "${cleanedQuery}" en tu tienda. Puedes intentar buscar en Mercado Libre: https://listado.mercadolibre.com.ar/${encodeURIComponent(cleanedQuery)}`;
+    }
+  } catch (err) {
+    console.error('Error en la base de datos:', err.message);
+    return 'Lo siento, no pude realizar la búsqueda en este momento.';
+  }
 }
 
 app.get('/start-session', (req, res) => {
