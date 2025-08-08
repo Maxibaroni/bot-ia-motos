@@ -39,7 +39,7 @@ async function searchParts(query) {
         const { data: searchData } = await axios.get(searchUrl);
         const $ = cheerio.load(searchData);
         
-        // Encontramos el primer enlace del producto que coincida
+        // CORRECCIÓN: el selector busca directamente el enlace del producto en el contenedor principal
         const firstProductLink = $('.item-gift__content-title a').attr('href');
 
         if (firstProductLink) {
