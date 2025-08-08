@@ -2,6 +2,7 @@ const express = require('express');
 const path = require('path');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { v4: uuidv4 } = require('uuid');
+const sqlite3 = require('sqlite3').verbose();
 const app = express();
 const port = 3000;
 
@@ -26,7 +27,29 @@ function fileToGenerativePart(base64Data) {
     };
 }
 
-// Se elimina la función searchParts
+// FUNCIÓN DE BÚSQUEDA CORREGIDA Y FINAL (usa la base de datos)
+async function searchParts(query) {
+    const db = new sqlite3.Database('./tienda.db');
+    const cleanedQuery = query.trim();
+
+    return new Promise((resolve, reject) => {
+        const sql = `SELECT nombre, precio, url FROM productos WHERE nombre LIKE ? LIMIT 1`;
+        db.get(sql, [`%${cleanedQuery}%`], (err, row) => {
+            if (err) {
+                console.error('Error en la base de datos:', err.message);
+                reject('Lo siento, no pude realizar la búsqueda en este momento.');
+                return;
+            }
+            if (row) {
+                const responseText = `He encontrado este repuesto en tu tienda:\n\n* **Producto:** ${row.nombre}\n* **Precio:** ${row.precio}\n* **Enlace:** ${row.url}`;
+                resolve(responseText);
+            } else {
+                resolve(`No he encontrado resultados para "${cleanedQuery}" en tu tienda. Puedes intentar buscar en Mercado Libre: https://listado.mercadolibre.com.ar/${encodeURIComponent(cleanedQuery)}`);
+            }
+        });
+        db.close();
+    });
+}
 
 app.get('/start-session', (req, res) => {
     const sessionId = uuidv4();
@@ -46,6 +69,13 @@ app.post('/chat', async (req, res) => {
     const history = sessions[sessionId];
 
     try {
+        const lowerCaseMessage = message.toLowerCase();
+        if (lowerCaseMessage.includes('buscar') || lowerCaseMessage.includes('precio') || lowerCaseMessage.includes('dónde comprar')) {
+            const searchResponse = await searchParts(message);
+            res.json({ response: searchResponse });
+            return;
+        }
+
         const model = genAI.getGenerativeModel({
             model: "gemini-1.5-flash",
             systemInstruction: "Eres un asistente experto en repuestos de motos, especializado en modelos de baja y media cilindrada. Responde de forma profesional y técnica. Si te preguntan por otro tema, responde: 'Lo siento, mi conocimiento se limita a los repuestos de motos.'"
