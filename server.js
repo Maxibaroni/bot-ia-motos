@@ -9,6 +9,24 @@ const port = 3000;
 const sessions = {};
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
+// --- LÓGICA PARA CREAR LA BASE DE DATOS Y LA TABLA ---
+const db = new sqlite3.Database('./tienda.db');
+
+db.serialize(() => {
+    // Crear la tabla 'productos' si no existe
+    db.run(`
+      CREATE TABLE IF NOT EXISTS productos (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nombre TEXT NOT NULL,
+        precio TEXT,
+        descripcion TEXT,
+        url TEXT
+      )
+    `);
+    console.log("Tabla 'productos' creada o ya existente.");
+});
+// ----------------------------------------------------
+
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json({ limit: '50mb' }));
 
@@ -29,7 +47,6 @@ function fileToGenerativePart(base64Data) {
 
 // FUNCIÓN DE BÚSQUEDA CORREGIDA Y FINAL (usa la base de datos)
 async function searchParts(query) {
-    const db = new sqlite3.Database('./tienda.db');
     const cleanedQuery = query.toLowerCase().replace('buscar', '').replace('precio', '').replace('dónde comprar', '').trim();
 
     return new Promise((resolve, reject) => {
@@ -47,7 +64,6 @@ async function searchParts(query) {
                 resolve(`No he encontrado resultados para "${cleanedQuery}" en tu tienda. Puedes intentar buscar en Mercado Libre: https://listado.mercadolibre.com.ar/${encodeURIComponent(cleanedQuery)}`);
             }
         });
-        db.close();
     });
 }
 
