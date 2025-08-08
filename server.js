@@ -21,6 +21,22 @@ db.prepare(`
   )
 `).run();
 console.log("Tabla 'productos' creada o ya existente.");
+
+// --- EJEMPLO DE CÓMO AGREGAR UN PRODUCTO ---
+const productoEjemplo = {
+    nombre: 'Filtro de Aire Honda XR 250 Tornado',
+    precio: '$9.478',
+    descripcion: 'Filtro de aire de calidad original para Honda XR 250 Tornado. Hecho en Argentina.',
+    url: 'https://ejemplo.com/filtro-aire-honda-xr-250'
+};
+
+const existingProduct = db.prepare('SELECT nombre FROM productos WHERE nombre = ?').get(productoEjemplo.nombre);
+if (!existingProduct) {
+    db.prepare('INSERT INTO productos (nombre, precio, descripcion, url) VALUES (@nombre, @precio, @descripcion, @url)').run(productoEjemplo);
+    console.log(`Producto '${productoEjemplo.nombre}' agregado a la base de datos.`);
+} else {
+    console.log(`El producto '${productoEjemplo.nombre}' ya existe. No se ha agregado.`);
+}
 // ----------------------------------------------------
 
 app.use(express.static(path.join(__dirname, 'public')));
@@ -41,9 +57,14 @@ function fileToGenerativePart(base64Data) {
   };
 }
 
-// FUNCIÓN DE BÚSQUEDA FINAL (usa better-sqlite3)
+// FUNCIÓN DE BÚSQUEDA CORREGIDA (usa better-sqlite3)
 async function searchParts(query) {
-  const cleanedQuery = query.toLowerCase().replace('buscar', '').replace('precio', '').replace('dónde comprar', '').trim();
+  const cleanedQuery = query.toLowerCase()
+                             .replace('buscar', '')
+                             .replace('precio', '')
+                             .replace('dónde comprar', '')
+                             .replace(/"/g, '') // Elimina comillas
+                             .trim();
   const sql = `SELECT nombre, precio, url FROM productos WHERE nombre LIKE ? LIMIT 1`;
   
   try {
@@ -114,4 +135,4 @@ app.post('/chat', async (req, res) => {
 
 app.listen(port, () => {
   console.log(`Servidor escuchando en http://localhost:${port}`);
-});// Esto es un cambio para forzar el commit.
+});
