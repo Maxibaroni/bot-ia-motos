@@ -1,15 +1,11 @@
 {
   "name": "bot-ia",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Bot de repuestos de motos",
+  "main": "server.js",
   "scripts": {
-    "start": "node server.js",
-    "build": "npm install sqlite3 --build-from-source=false"
+    "start": "node server.js"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
     "express": "^5.1.0",
