@@ -24,35 +24,40 @@ function fileToGenerativePart(base64Data) {
     };
 }
 
-// FUNCIÓN DE BÚSQUEDA MEJORADA
+// FUNCIÓN DE BÚSQUEDA CORREGIDA Y FINAL
 async function searchParts(query) {
     const cleanedQuery = query.toLowerCase().replace('buscar', '').replace('precio', '').replace('dónde comprar', '').trim();
     
+    // Paso 1: Buscar en la página de resultados
     const searchUrl = `https://bybmotorepuestosnelson.tiendanegocio.com/productos/buscar?keywords=${encodeURIComponent(cleanedQuery)}`;
     
     try {
-        const { data } = await axios.get(searchUrl);
-        const $ = cheerio.load(data);
+        const { data: searchData } = await axios.get(searchUrl);
+        const $ = cheerio.load(searchData);
         
-        const results = [];
-        $('.item-gift__content').each((i, el) => {
-          const name = $(el).find('.item-gift__content-title a').text().trim();
-          const price = $(el).find('.item-gift__content-price').text().trim();
-          const url = `https://bybmotorepuestosnelson.tiendanegocio.com${$(el).find('.item-gift__content-title a').attr('href')}`;
-          if (name && url) {
-            results.push({ name, price, url });
-          }
-        });
-        
-        if (results.length > 0) {
-            let responseText = `He encontrado estos resultados en tu tienda para "${cleanedQuery}":\n\n`;
-            results.slice(0, 3).forEach(item => {
-                responseText += `* **${item.name}**\n  **Precio:** ${item.price ? `${item.price}` : 'Precio no disponible'}\n  **Enlace:** ${item.url}\n\n`;
-            });
-            // Aquí puedes agregar un mensaje para que el bot pida al usuario si quiere más detalles
-            responseText += "Para más detalles sobre un producto específico, por favor, haz clic en el enlace.";
+        // Encontramos el primer enlace del producto que coincida
+        const firstProductLink = $('.item-gift__content-title a').attr('href');
+
+        if (firstProductLink) {
+            const productPageUrl = `https://bybmotorepuestosnelson.tiendanegocio.com${firstProductLink}`;
+            
+            // Paso 2: Entrar en la página del producto para obtener detalles
+            const { data: productData } = await axios.get(productPageUrl);
+            const $$ = cheerio.load(productData);
+
+            // Obtenemos el nombre, precio y descripción con los selectores exactos que encontraste
+            const name = $$('.product-title__name').text().trim();
+            const price = $$('.product-title__price').text().trim();
+            const description = $$('.product-description').text().trim();
+            
+            let responseText = `He encontrado este repuesto en tu tienda:\n\n`;
+            responseText += `* **Producto:** ${name}\n`;
+            responseText += `* **Precio:** ${price}\n`;
+            responseText += `* **Descripción:** ${description}\n`;
+            responseText += `* **Enlace:** ${productPageUrl}\n\n`;
 
             return responseText;
+            
         } else {
             return `No he encontrado resultados para "${cleanedQuery}" en tu tienda. Puedes intentar buscar en Mercado Libre: https://listado.mercadolibre.com.ar/${encodeURIComponent(cleanedQuery)}`;
         }
