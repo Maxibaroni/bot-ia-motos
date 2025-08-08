@@ -32,24 +32,21 @@ function fileToGenerativePart(base64Data) {
 async function searchParts(query) {
     const cleanedQuery = query.toLowerCase().replace('buscar', '').replace('precio', '').replace('dónde comprar', '').trim();
     
-    // Paso 1: Buscar en la página de resultados
     const searchUrl = `https://bybmotorepuestosnelson.tiendanegocio.com/productos/buscar?keywords=${encodeURIComponent(cleanedQuery)}`;
     
     try {
         const { data: searchData } = await axios.get(searchUrl);
         const $ = cheerio.load(searchData);
         
-        // Encontramos el primer enlace del producto que coincida
-        const firstProductLink = $('.item-gift__content a').attr('href'); // <--- CORRECCIÓN AQUÍ
+        // CORRECCIÓN: El enlace completo ya se encuentra en el href
+        const firstProductLink = $('.item-gift__content a').attr('href');
 
         if (firstProductLink) {
             const productPageUrl = `https://bybmotorepuestosnelson.tiendanegocio.com${firstProductLink}`;
             
-            // Paso 2: Entrar en la página del producto para obtener detalles
             const { data: productData } = await axios.get(productPageUrl);
             const $$ = cheerio.load(productData);
 
-            // Obtenemos el nombre, precio y descripción
             const name = $$('.product-title__name').text().trim();
             const price = $$('.product-title__price').text().trim();
             const description = $$('.product-description').text().trim();
