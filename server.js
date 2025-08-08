@@ -13,7 +13,6 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json({ limit: '50mb' }));
 
-// NUEVO: Agregamos esta línea para servir el index.html en la ruta principal
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
@@ -40,14 +39,17 @@ async function searchParts(query) {
         const { data: searchData } = await axios.get(searchUrl);
         const $ = cheerio.load(searchData);
         
-        const firstProductLink = $('.item-gift__content-title a').attr('href');
+        // Encontramos el primer enlace del producto que coincida
+        const firstProductLink = $('.item-gift__content a').attr('href'); // <--- CORRECCIÓN AQUÍ
 
         if (firstProductLink) {
             const productPageUrl = `https://bybmotorepuestosnelson.tiendanegocio.com${firstProductLink}`;
             
+            // Paso 2: Entrar en la página del producto para obtener detalles
             const { data: productData } = await axios.get(productPageUrl);
             const $$ = cheerio.load(productData);
 
+            // Obtenemos el nombre, precio y descripción
             const name = $$('.product-title__name').text().trim();
             const price = $$('.product-title__price').text().trim();
             const description = $$('.product-description').text().trim();
