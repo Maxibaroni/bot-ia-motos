@@ -30,7 +30,7 @@ function fileToGenerativePart(base64Data) {
 // FUNCIÓN DE BÚSQUEDA CORREGIDA Y FINAL (usa la base de datos)
 async function searchParts(query) {
     const db = new sqlite3.Database('./tienda.db');
-    const cleanedQuery = query.trim();
+    const cleanedQuery = query.toLowerCase().replace('buscar', '').replace('precio', '').replace('dónde comprar', '').trim();
 
     return new Promise((resolve, reject) => {
         const sql = `SELECT nombre, precio, url FROM productos WHERE nombre LIKE ? LIMIT 1`;
