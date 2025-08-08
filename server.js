@@ -98,7 +98,7 @@ app.post('/chat', async (req, res) => {
         });
 
         const chat = model.startChat({ history: history });
-        
+
         const parts = [];
         if (message) {
             parts.push({ text: message });
